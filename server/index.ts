@@ -39,6 +39,15 @@ io.on("connection", (socket) => {
       offer,
     });
   });
+
+
+  socket.on("call:accepted", (data: { to: string; ans: any }) => {
+    const { to, ans } = data;
+    io.to(to).emit("call:accepted", {
+      from: socket.id,
+      ans,
+    });
+  });
 });
 
 httpServer.listen(8000, () => {
