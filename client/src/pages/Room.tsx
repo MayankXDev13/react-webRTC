@@ -21,11 +21,17 @@ function Room() {
 
   const sendMyStream = useCallback(() => {
     if (myStream && peer.peer) {
-      const existingTracks = new Set(
-        peer.peer.getSenders().map((s) => s.track),
-      );
+      const senders = peer.peer.getSenders();
       for (const track of myStream.getTracks()) {
-        if (!existingTracks.has(track)) {
+        // Find an existing sender for this track kind (audio/video)
+        const existingSender = senders.find(
+          (s) => s.track?.kind === track.kind,
+        );
+        if (existingSender) {
+          // Replace the track on the existing sender (safe, no renegotiation needed)
+          existingSender.replaceTrack(track);
+        } else {
+          // No sender for this kind yet, add a new one
           peer.peer.addTrack(track, myStream);
         }
       }
@@ -40,6 +46,11 @@ function Room() {
     });
 
     setMyStream(stream);
+
+    // Add local tracks before creating the offer
+    for (const track of stream.getTracks()) {
+      peer.peer?.addTrack(track, stream);
+    }
 
     const offer = await peer.getOffer();
 
@@ -69,6 +80,11 @@ function Room() {
 
       setMyStream(stream);
 
+      // Add local tracks before creating the answer
+      for (const track of stream.getTracks()) {
+        peer.peer?.addTrack(track, stream);
+      }
+
       const answer = await peer.getAnswer(offer);
 
       socket.emit("call:accepted", {
@@ -84,6 +100,7 @@ function Room() {
     async ({ to, ans }: { to: string; ans: RTCSessionDescriptionInit }) => {
       console.log("Call Accepted");
       console.log("Answer:", ans);
+      sendMyStream()
 
       // Answer is from the remote peer,
       // so it must be set as the remote description.
@@ -186,8 +203,10 @@ function Room() {
       {remoteSocketId && <button onClick={handleCallUser}>Call</button>}
       {myStream && <button onClick={sendMyStream}>Send Stream</button>}
 
+      <h1>My Stream</h1>
       {myStream && <StreamVideo stream={myStream} muted />}
 
+      <h1>Remote Stream</h1>
       {remoteStream && <StreamVideo stream={remoteStream} />}
     </div>
   );
