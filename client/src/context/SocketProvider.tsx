@@ -1,21 +1,22 @@
 import { createContext, useMemo, useContext } from "react";
-import { io } from "socket.io-client";
+import { io, type Socket } from "socket.io-client";
 
-const SocketContext = createContext(null);
+const SocketContext = createContext<Socket | null>(null);
 
-export const useSocket = () => {
-    const socket = useContext(SocketContext);
-    return socket
-}
+// eslint-disable-next-line react-refresh/only-export-components
+export const useSocket = (): Socket => {
+  const socket = useContext(SocketContext);
+  if (!socket) {
+    throw new Error("useSocket must be used within a SocketProvider");
+  }
+  return socket;
+};
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
-    const socket = useMemo(() => {
-        const sockect = io("http://localhost:8000");
-        return sockect;
-    }, []);
-    return (
-        <SocketContext.Provider value={socket}>
-            {children}
-        </SocketContext.Provider>
-    );
-}
+  const socket = useMemo(() => {
+    return io("http://localhost:8000");
+  }, []);
+  return (
+    <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>
+  );
+};
