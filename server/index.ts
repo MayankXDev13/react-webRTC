@@ -48,6 +48,21 @@ io.on("connection", (socket) => {
       ans,
     });
   });
+
+  socket.on("peer:nego:need", ({ to, offer }) => {
+    io.to(to).emit("peer:nego:need", {
+      from: socket.id,
+      offer,
+    });
+  });
+
+
+  socket.on("peer:nego:done", ({to, ans}) => {
+    io.to(to).emit("peer:nego:final", {
+      from: socket.id,
+      ans,
+    });
+  })
 });
 
 httpServer.listen(8000, () => {
